@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Error - SnapFlow</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --error: #ef4444;
+            --bg: #f1f5f9;
+            --surface: #ffffff;
+            --text: #0f172a;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 40px 20px;
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: var(--surface);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .error-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 20px;
+            color: var(--error);
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--error);
+            margin: 0 0 10px 0;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+
+        .error-details {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: left;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 13px;
+            color: #7f1d1d;
+            overflow-x: auto;
+            word-break: break-word;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #4f46e5;
+            transform: translateY(-1px);
+        }
+
+        button.secondary {
+            background: var(--surface);
+            color: var(--primary);
+            border: 1px solid var(--border);
+        }
+
+        button.secondary:hover {
+            background: #f8fafc;
+        }
+
+        .help-text {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+
+        <h1>Something Went Wrong</h1>
+        <p class="subtitle">SnapFlow encountered an error while capturing your screen.</p>
+
+        <div class="error-details" id="errorMessage">
+            Unknown error occurred. Please try again.
+        </div>
+
+        <div class="actions">
+            <button onclick="location.href='popup.html'">← Back to Popup</button>
+            <button class="secondary" onclick="location.href='welcome.html'">Help & Settings</button>
+        </div>
+
+        <p class="help-text">
+            If this error persists, please check that you have the latest version of SnapFlow installed
+            and restart your browser.
+        </p>
+    </div>
+
+    <script>
+        // Get error message from URL
+        const params = new URLSearchParams(window.location.search);
+        const message = params.get('message') || 'Unknown error occurred';
+        document.getElementById('errorMessage').textContent = decodeURIComponent(message);
+    </script>
+</body>
+
+</html>

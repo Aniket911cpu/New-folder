@@ -3,6 +3,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const previewContainer = document.getElementById('previewContainer');
     const infoText = document.getElementById('infoText');
     const controls = document.getElementById('controls');
+    const themeToggle = document.getElementById('themeToggle');
+
+    // Initialize theme
+    loadTheme();
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleTheme);
+    }
 
     // Editor Elements
     const modePen = document.getElementById('modePen');
@@ -35,25 +43,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let totalWidth, totalHeight;
 
-    if (meta.mode === 'region') {
+    if (meta && meta.mode === 'region') {
         // Handle Region Capture (Crop)
-        // Src is the full viewport image (usually just one)
         const src = capturedImages[0].src;
         const img = await loadImage(src);
 
         const dpr = meta.dpr || 1;
         const rect = meta.region;
 
-        // Scale rect by dpr
-        // Note: content script rect is in css pixels.
-        // Image is usually device pixels. 
-        // rect: {x, y, width, height}
-
         canvas.width = rect.width * dpr;
         canvas.height = rect.height * dpr;
 
-        // Draw cropped
-        // drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
         ctx.drawImage(img, rect.x * dpr, rect.y * dpr, rect.width * dpr, rect.height * dpr, 0, 0, canvas.width, canvas.height);
 
         totalWidth = canvas.width;
@@ -61,17 +61,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } else {
         // Full / Visible logic
-        const devicePixelRatio = meta.devicePixelRatio || 1;
-        totalWidth = meta.fullWidth ? meta.fullWidth * devicePixelRatio : 0;
-        totalHeight = meta.fullHeight ? meta.fullHeight * devicePixelRatio : 0;
-
-        // If visible mode, fullHeight might be 0 in meta if we didn't calculate it? 
-        // Actually background.js set 0. Let's infer from image.
+        const devicePixelRatio = meta?.devicePixelRatio || 1;
+        totalWidth = meta?.fullWidth ? meta.fullWidth * devicePixelRatio : 0;
+        totalHeight = meta?.fullHeight ? meta.fullHeight * devicePixelRatio : 0;
 
         const images = await Promise.all(capturedImages.map(item => loadImage(item.src)));
 
         if (totalWidth === 0) {
-            // Single image mode fallback
             totalWidth = images[0].width;
             totalHeight = images[0].height;
         }
@@ -81,7 +77,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         capturedImages.forEach((item, i) => {
             const img = images[i];
-            // x, y are stored in item (CSS pixels)
             const drawX = (item.x || 0) * devicePixelRatio;
             const drawY = (item.y || 0) * devicePixelRatio;
             ctx.drawImage(img, drawX, drawY);
@@ -89,7 +84,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     previewContainer.appendChild(canvas);
-    infoText.textContent = `Captured ${canvas.width}x${canvas.height} px`;
+    infoText.textContent = `Captured ${Math.round(canvas.width)}×${Math.round(canvas.height)} px`;
+
+    // Display metadata
+    if (meta) {
+        const metadata = document.getElementById('metadata');
+        if (metadata) {
+            const savedAt = meta.savedAt ? new Date(meta.savedAt).toLocaleString() : '';
+            metadata.textContent = savedAt ? `Captured at ${savedAt}` : '';
+        }
+    }
 
     // Initialize History
     saveState();
@@ -117,9 +121,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         ctx.lineWidth = currentTool === 'highlight' ? 20 : 3;
         ctx.strokeStyle = currentTool === 'highlight' ? 'rgba(255, 255, 0, 0.4)' : '#ef4444';
 
-        // Composite for highlight
         if (currentTool === 'highlight') {
-            ctx.globalCompositeOperation = 'multiply'; // or darken for marker effect
+            ctx.globalCompositeOperation = 'multiply';
         } else {
             ctx.globalCompositeOperation = 'source-over';
         }
@@ -133,7 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!isDrawing) return;
         isDrawing = false;
         ctx.closePath();
-        ctx.globalCompositeOperation = 'source-over'; // Reset
+        ctx.globalCompositeOperation = 'source-over';
         saveState();
     }
 
@@ -148,7 +151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function saveState() {
-        if (history.length > 10) history.shift();
+        if (history.length > 20) history.shift();
         history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
     }
 
@@ -165,7 +168,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     actionUndo.addEventListener('click', () => {
         if (history.length > 1) {
-            history.pop(); // Remove current
+            history.pop();
             const prev = history[history.length - 1];
             ctx.putImageData(prev, 0, 0);
         }
@@ -176,15 +179,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             const item = new ClipboardItem({ 'image/png': blob });
             navigator.clipboard.write([item]).then(() => {
                 const originalText = infoText.textContent;
-                infoText.textContent = "Copied to clipboard!";
+                infoText.textContent = "✓ Copied to clipboard!";
                 setTimeout(() => infoText.textContent = originalText, 2000);
+            }).catch(err => {
+                console.error('Copy failed:', err);
+                infoText.textContent = "✗ Failed to copy to clipboard";
             });
         });
     });
 
     function updateToolUI() {
-        modePen.style.background = currentTool === 'pen' ? '#e0e7ff' : '#fff';
-        modeHighlight.style.background = currentTool === 'highlight' ? '#fef3c7' : '#fff';
+        modePen.style.background = currentTool === 'pen' ? '#e0e7ff' : 'var(--surface)';
+        modeHighlight.style.background = currentTool === 'highlight' ? '#fef3c7' : 'var(--surface)';
         canvas.style.cursor = currentTool ? 'crosshair' : 'default';
     }
 
@@ -196,31 +202,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- existing download/print logic ---
-    // Clean up old controls generation or append to it?
-    // The previous code had complex stitching & 32k split logic. 
-    // I should adapt that to use 'canvas' variable I just created.
-    // BUT, for 32k splitting, the drawing logic complicates things (we draw on top).
-    // If the image is < 32k, we just use the canvas we drew on.
-    // If > 32k, editor might be laggy, but let's assume valid.
-
-    // Add Download Button
-    // Add Download Button
+    // Download Button
     const btn = document.createElement('button');
     btn.className = 'primary';
-    btn.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" /></svg> Download PNG`;
+    btn.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><path fill="currentColor" d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" /></svg> Download PNG`;
     btn.onclick = () => {
-        // Simple download of current canvas
-        const link = document.createElement('a');
-        link.download = `snapflow-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        canvas.toBlob(blob => {
+            const filename = `snapflow-${new Date().toISOString().split('T')[0]}-${new Date().getTime() % 100000}.png`;
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            infoText.textContent = "✓ Downloaded!";
+            setTimeout(() => {
+                infoText.textContent = `Captured ${Math.round(canvas.width)}×${Math.round(canvas.height)} px`;
+            }, 2000);
+        });
     };
     controls.appendChild(btn);
 
     const printBtn = document.createElement('button');
-    printBtn.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><path d="M18,3H6V7H18M19,12A1,1 0 0,1 18,11A1,1 0 0,1 19,10A1,1 0 0,1 20,11A1,1 0 0,1 19,12M16,19H8V14H16M19,8H5A3,3 0 0,0 2,11V17H6V21H18V17H22V11A3,3 0 0,0 19,8Z"/></svg> PDF`;
-    printBtn.style.marginLeft = '10px';
+    printBtn.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><path fill="currentColor" d="M18,3H6V7H18M19,12A1,1 0 0,1 18,11A1,1 0 0,1 19,10A1,1 0 0,1 20,11A1,1 0 0,1 19,12M16,19H8V14H16M19,8H5A3,3 0 0,0 2,11V17H6V21H18V17H22V11A3,3 0 0,0 19,8Z"/></svg> PDF`;
     printBtn.onclick = () => window.print();
     controls.appendChild(printBtn);
 
@@ -231,27 +237,62 @@ document.addEventListener('DOMContentLoaded', async () => {
     body * {
         visibility: hidden;
     }
-        .preview - container, .preview - container * {
-            visibility: visible;
-        }
-            .preview - container {
+    .preview-container, .preview-container * {
+        visibility: visible;
+    }
+    .preview-container {
         position: absolute;
         left: 0;
         top: 0;
         border: none;
         margin: 0;
         padding: 0;
-        max - height: none;
+        max-height: none;
         overflow: visible;
     }
-            canvas {
+    canvas {
         margin: 0;
-        box - shadow: none;
-        max - width: 100 %;
-        page -break-inside: avoid;
+        box-shadow: none;
+        max-width: 100%;
+        page-break-inside: avoid;
     }
     header, .controls, .info { display: none; }
 }
 `;
     document.head.appendChild(style);
+
+    // Theme management
+    function loadTheme() {
+        chrome.storage.sync.get(['theme'], (result) => {
+            const theme = result.theme || 'light';
+            applyTheme(theme);
+        });
+    }
+
+    function toggleTheme() {
+        const html = document.documentElement;
+        const isDark = html.classList.contains('dark-mode');
+        const newTheme = isDark ? 'light' : 'dark';
+
+        chrome.storage.sync.set({ theme: newTheme }, () => {
+            applyTheme(newTheme);
+        });
+    }
+
+    function applyTheme(theme) {
+        const html = document.documentElement;
+        if (theme === 'dark') {
+            html.classList.add('dark-mode');
+            if (themeToggle) {
+                themeToggle.innerHTML = '☀️';
+                themeToggle.title = 'Switch to Light Mode';
+            }
+        } else {
+            html.classList.remove('dark-mode');
+            if (themeToggle) {
+                themeToggle.innerHTML = '🌙';
+                themeToggle.title = 'Switch to Dark Mode';
+            }
+        }
+    }
 });

@@ -1,43 +1,65 @@
 // background.js
+// Production-grade background service worker with comprehensive error handling
+
+const DEBUG = true;
+
+function log(msg, data) {
+    if (DEBUG) {
+        console.log(`[SnapFlow] ${msg}`, data || '');
+    }
+}
+
+function error(msg, err) {
+    console.error(`[SnapFlow ERROR] ${msg}`, err);
+}
 
 // Keep track of the current tab logic
 async function captureTab(tabId) {
+    let cleanupNeeded = false;
     try {
-        // 1. Inject or ensure content script is ready
-        // (Assuming manifest has it, but good to be safe or just use scripting.executeScript if not)
-        // Manifest "content_scripts" is not set in my plan, I used "activeTab".
-        // So I must inject it.
-        await chrome.scripting.executeScript({
-            target: { tabId: tabId },
-            files: ['content.js']
-        });
+        log("Starting full page capture for tab", tabId);
+
+        // 1. Inject content script
+        try {
+            await chrome.scripting.executeScript({
+                target: { tabId: tabId },
+                files: ['content.js']
+            });
+        } catch (e) {
+            error("Failed to inject content script", e);
+            throw new Error("Could not inject content script into this page");
+        }
+
+        cleanupNeeded = true;
 
         // 2. Get Dimensions
         const dimensions = await sendMessageToTab(tabId, { action: "get_dimensions" });
         if (!dimensions) {
-            console.error("Could not get dimensions");
-            return;
+            throw new Error("Could not retrieve page dimensions");
         }
 
-        const { fullHeight, fullWidth, windowHeight, devicePixelRatio } = dimensions;
+        log("Page dimensions", dimensions);
+        const { fullHeight, fullWidth, windowHeight, windowWidth, devicePixelRatio } = dimensions;
+
+        // Validate dimensions
+        if (!fullHeight || !fullWidth || !windowHeight || !windowWidth) {
+            throw new Error("Invalid page dimensions received");
+        }
 
         // 3. Prepare (Hide fixed elements, show loader)
         await sendMessageToTab(tabId, { action: "prepare_capture" });
 
-        // 4. Capture Loop
+        // 4. Capture Loop with overlap
         const captures = [];
         let currentY = 0;
         let index = 0;
 
-        // We capture visible vp, then scroll.
-        // Step size should be windowHeight.
-        // We might want to overlap slightly to avoid lines? 
-        // For simplicity, let's just do windowHeight. 
-        // NOTE: Chrome captures the *visible viewport*.
+        // Small overlap to prevent gaps
+        const overlap = Math.ceil(windowHeight * 0.1); // 10% overlap
+        const totalScreenshots = Math.ceil((fullHeight - overlap) / (windowHeight - overlap)) *
+            Math.ceil((fullWidth - overlap) / (windowWidth - overlap));
 
-        // Actually windowWidth is from dimensions
-        const windowWidth = dimensions.windowWidth;
-        const totalScreenshots = Math.ceil(fullHeight / windowHeight) * Math.ceil(fullWidth / windowWidth);
+        log("Starting capture loop", { totalScreenshots, fullHeight, fullWidth });
 
         while (currentY < fullHeight) {
             let currentX = 0;
@@ -51,124 +73,205 @@ async function captureTab(tabId) {
                     total: totalScreenshots
                 });
 
-                // Capture
-                const dataUrl = await chrome.tabs.captureVisibleTab(tabId, { format: "png" });
-                captures.push({
-                    src: dataUrl,
-                    y: scrollResponse ? scrollResponse.actualY : currentY,
-                    x: scrollResponse ? scrollResponse.actualX : currentX
-                });
+                if (!scrollResponse) {
+                    throw new Error(`Failed to scroll to position ${currentX}, ${currentY}`);
+                }
 
-                currentX += windowWidth;
+                // Small delay for rendering
+                await sleep(100);
+
+                // Capture
+                try {
+                    const dataUrl = await chrome.tabs.captureVisibleTab(tabId, { format: "png" });
+                    captures.push({
+                        src: dataUrl,
+                        y: scrollResponse.actualY,
+                        x: scrollResponse.actualX
+                    });
+                    log(`Captured ${index + 1}/${totalScreenshots}`);
+                } catch (e) {
+                    error(`Failed to capture at position ${currentX}, ${currentY}`, e);
+                    throw e;
+                }
+
+                currentX += (windowWidth - overlap);
                 index++;
             }
-            currentY += windowHeight;
+            currentY += (windowHeight - overlap);
         }
+
+        log("Capture complete", { totalCaptures: captures.length });
 
         // 5. Cleanup
         await sendMessageToTab(tabId, { action: "finish_capture" });
+        cleanupNeeded = false;
 
         // 6. Save & Open Result
         await chrome.storage.local.set({
             capturedImages: captures,
-            meta: dimensions
+            meta: {
+                ...dimensions,
+                captureDate: new Date().toISOString(),
+                totalImages: captures.length
+            }
         });
 
         chrome.tabs.create({ url: "result.html" });
 
     } catch (err) {
-        console.error("Capture failed", err);
-        // Try to cleanup if possible
-        try {
-            await sendMessageToTab(tabId, { action: "finish_capture" });
-        } catch (e) { }
+        error("Capture failed", err);
+
+        // Try to cleanup if needed
+        if (cleanupNeeded) {
+            try {
+                await sendMessageToTab(tabId, { action: "finish_capture" });
+            } catch (e) {
+                error("Cleanup failed", e);
+            }
+        }
+
+        // Notify user of error
+        chrome.tabs.create({
+            url: `error.html?message=${encodeURIComponent(err.message || 'Unknown error occurred')}`
+        });
     }
 }
 
 function sendMessageToTab(tabId, message) {
-    return new Promise((resolve) => {
-        chrome.tabs.sendMessage(tabId, message, (response) => {
-            if (chrome.runtime.lastError) {
-                console.warn(chrome.runtime.lastError);
-                resolve(null);
-            } else {
-                resolve(response);
-            }
-        });
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            reject(new Error("Message timeout - tab may be unresponsive"));
+        }, 30000); // 30 second timeout
+
+        try {
+            chrome.tabs.sendMessage(tabId, message, (response) => {
+                clearTimeout(timeout);
+
+                if (chrome.runtime.lastError) {
+                    console.warn(chrome.runtime.lastError);
+                    reject(new Error(chrome.runtime.lastError.message));
+                } else {
+                    resolve(response);
+                }
+            });
+        } catch (e) {
+            clearTimeout(timeout);
+            reject(e);
+        }
     });
 }
 
-// background.js
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 async function captureVisible(tabId) {
     try {
+        log("Starting visible area capture");
         const dataUrl = await chrome.tabs.captureVisibleTab(tabId, { format: "png" });
-        // Just one image
+
         await chrome.storage.local.set({
             capturedImages: [{ src: dataUrl, y: 0, x: 0 }],
-            meta: { fullWidth: 0, fullHeight: 0, devicePixelRatio: 1 } // Dummy meta, result.js should handle single image
+            meta: {
+                fullWidth: 0,
+                fullHeight: 0,
+                devicePixelRatio: 1,
+                mode: 'visible',
+                captureDate: new Date().toISOString()
+            }
         });
         chrome.tabs.create({ url: "result.html?mode=visible" });
     } catch (e) {
-        console.error(e);
+        error("Visible capture failed", e);
+        chrome.tabs.create({
+            url: `error.html?message=${encodeURIComponent('Failed to capture visible area: ' + e.message)}`
+        });
     }
 }
 
 async function startRegionCapture(tabId) {
     try {
+        log("Starting region capture overlay");
         await chrome.scripting.executeScript({
             target: { tabId: tabId },
             files: ['content.js']
         });
         await sendMessageToTab(tabId, { action: "start_region_selection" });
-    } catch (e) { console.error(e); }
+    } catch (e) {
+        error("Region capture initialization failed", e);
+        chrome.tabs.create({
+            url: `error.html?message=${encodeURIComponent('Could not start region selection: ' + e.message)}`
+        });
+    }
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === "capture") {
-        triggerCapture(sendResponse);
-        return true;
-    }
-    else if (message.action === "capture_visible") {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (tabs[0]) captureVisible(tabs[0].id);
-        });
-    }
-    else if (message.action === "capture_region") {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (tabs[0]) startRegionCapture(tabs[0].id);
-        });
-    }
-    else if (message.action === "region_selected") {
-        // Received rect from content script
-        // Capture visible tab, then crop in result? 
-        // Note: region capture is usually visible region.
-        const tabId = sender.tab.id;
-        chrome.tabs.captureVisibleTab(tabId, { format: "png" }, (dataUrl) => {
-            chrome.storage.local.set({
-                capturedImages: [{ src: dataUrl }], // We'll store the full image
-                meta: {
-                    region: message.rect,
-                    dpr: message.devicePixelRatio,
-                    mode: 'region'
-                }
-            }, () => {
-                chrome.tabs.create({ url: "result.html?mode=region" });
+    try {
+        if (message.action === "capture") {
+            triggerCapture(sendResponse);
+            return true;
+        }
+        else if (message.action === "capture_visible") {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs[0]) captureVisible(tabs[0].id);
+                else sendResponse?.({ status: "no_tab" });
             });
-        });
+            return true;
+        }
+        else if (message.action === "capture_region") {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs[0]) startRegionCapture(tabs[0].id);
+                else sendResponse?.({ status: "no_tab" });
+            });
+            return true;
+        }
+        else if (message.action === "region_selected") {
+            log("Region selected", message.rect);
+            const tabId = sender.tab.id;
+            chrome.tabs.captureVisibleTab(tabId, { format: "png" }, (dataUrl) => {
+                if (chrome.runtime.lastError) {
+                    error("Region capture failed", chrome.runtime.lastError);
+                    chrome.tabs.create({
+                        url: `error.html?message=${encodeURIComponent('Failed to capture region')}`
+                    });
+                    return;
+                }
+
+                chrome.storage.local.set({
+                    capturedImages: [{ src: dataUrl }],
+                    meta: {
+                        region: message.rect,
+                        dpr: message.devicePixelRatio,
+                        mode: 'region',
+                        captureDate: new Date().toISOString()
+                    }
+                }, () => {
+                    chrome.tabs.create({ url: "result.html?mode=region" });
+                });
+            });
+            return true;
+        }
+    } catch (e) {
+        error("Message handling error", e);
+        sendResponse?.({ status: "error", message: e.message });
     }
 });
 
 chrome.commands.onCommand.addListener((command) => {
-    if (command === "capture_page") {
-        console.log("Command triggered");
-        triggerCapture();
+    try {
+        if (command === "capture_page") {
+            log("Command triggered: capture_page");
+            triggerCapture();
+        }
+    } catch (e) {
+        error("Command handler error", e);
     }
 });
 
 function triggerCapture(sendResponse) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0]) {
+            log("Triggering capture for tab", tabs[0].id);
             captureTab(tabs[0].id);
             if (sendResponse) sendResponse({ status: "started" });
         } else {

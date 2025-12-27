@@ -1,18 +1,24 @@
 {
   "manifest_version": 3,
   "name": "SnapFlow - Web Capture & Snip",
-  "version": "1.0.0",
-  "description": "Capture a full-page screenshot of the active tab.",
+  "version": "1.2.0",
+  "description": "Capture full-page screenshots, visible areas, or custom regions. Edit, annotate, and share instantly.",
   "permissions": [
     "activeTab",
     "scripting",
     "storage",
     "unlimitedStorage",
-    "clipboardWrite"
+    "clipboardWrite",
+    "notifications"
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Full Page Capture"
+    "default_title": "SnapFlow - Full Page Capture",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "options_ui": {
     "page": "options.html",
