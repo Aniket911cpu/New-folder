@@ -140,6 +140,29 @@
 
         <div class="info" id="infoText">Processing your capture...</div>
 
+        <div id="editorToolbar"
+            style="display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <button id="modePen" class="tool-btn" title="Pen"><svg class="icon" viewBox="0 0 24 24">
+                    <path
+                        d="M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87L20.71,7.04Z" />
+                </svg></button>
+            <button id="modeHighlight" class="tool-btn" title="Highlighter"><svg class="icon" viewBox="0 0 24 24"
+                    style="color: #f59e0b;">
+                    <path
+                        d="M18.5,1.15C17.97,1.15 17.46,1.34 17.07,1.73L11.26,7.55L16.91,13.2L22.73,7.39C23.5,6.61 23.5,5.35 22.73,4.56L19.89,1.73C19.5,1.34 19,1.15 18.5,1.15M10.3,8.5L4.34,14.46C3.56,15.24 3.56,16.5 4.34,17.29L7.18,20.13C7.56,20.5 8.08,20.71 8.6,20.71C9.12,20.71 9.64,20.5 10.03,20.13L15.96,14.2L10.3,8.5M2,20.18L4.83,23H13.31L10.31,20.03L2,20.18Z" />
+                </svg></button>
+            <div style="width: 1px; background: #e2e8f0; margin: 0 5px;"></div>
+            <button id="actionUndo" class="tool-btn" title="Undo"><svg class="icon" viewBox="0 0 24 24">
+                    <path
+                        d="M12.5,8C9.85,8 7.45,9 5.6,10.6L2,7V16H11L7.38,12.38C8.77,11.22 10.54,10.5 12.5,10.5C16.04,10.5 19.05,12.81 20.1,16L22.47,15.22C21.08,11.03 17.15,8 12.5,8Z" />
+                </svg></button>
+            <div style="width: 1px; background: #e2e8f0; margin: 0 5px;"></div>
+            <button id="actionCopy" class="tool-btn" title="Copy to Clipboard"><svg class="icon" viewBox="0 0 24 24">
+                    <path
+                        d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z" />
+                </svg></button>
+        </div>
+
         <div class="preview-container" id="previewContainer">
             <!-- Canvases will be injected here -->
         </div>
