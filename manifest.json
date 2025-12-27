@@ -7,11 +7,16 @@
     "activeTab",
     "scripting",
     "storage",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "clipboardWrite"
   ],
   "action": {
     "default_popup": "popup.html",
     "default_title": "Full Page Capture"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
   },
   "commands": {
     "capture_page": {

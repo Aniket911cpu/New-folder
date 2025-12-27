@@ -98,10 +98,64 @@ function sendMessageToTab(tabId, message) {
     });
 }
 
+// background.js
+
+async function captureVisible(tabId) {
+    try {
+        const dataUrl = await chrome.tabs.captureVisibleTab(tabId, { format: "png" });
+        // Just one image
+        await chrome.storage.local.set({
+            capturedImages: [{ src: dataUrl, y: 0, x: 0 }],
+            meta: { fullWidth: 0, fullHeight: 0, devicePixelRatio: 1 } // Dummy meta, result.js should handle single image
+        });
+        chrome.tabs.create({ url: "result.html?mode=visible" });
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function startRegionCapture(tabId) {
+    try {
+        await chrome.scripting.executeScript({
+            target: { tabId: tabId },
+            files: ['content.js']
+        });
+        await sendMessageToTab(tabId, { action: "start_region_selection" });
+    } catch (e) { console.error(e); }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "capture") {
         triggerCapture(sendResponse);
-        return true; // async response
+        return true;
+    }
+    else if (message.action === "capture_visible") {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0]) captureVisible(tabs[0].id);
+        });
+    }
+    else if (message.action === "capture_region") {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0]) startRegionCapture(tabs[0].id);
+        });
+    }
+    else if (message.action === "region_selected") {
+        // Received rect from content script
+        // Capture visible tab, then crop in result? 
+        // Note: region capture is usually visible region.
+        const tabId = sender.tab.id;
+        chrome.tabs.captureVisibleTab(tabId, { format: "png" }, (dataUrl) => {
+            chrome.storage.local.set({
+                capturedImages: [{ src: dataUrl }], // We'll store the full image
+                meta: {
+                    region: message.rect,
+                    dpr: message.devicePixelRatio,
+                    mode: 'region'
+                }
+            }, () => {
+                chrome.tabs.create({ url: "result.html?mode=region" });
+            });
+        });
     }
 });
 
