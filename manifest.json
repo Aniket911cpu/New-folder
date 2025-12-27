@@ -13,6 +13,15 @@
     "default_popup": "popup.html",
     "default_title": "Full Page Capture"
   },
+  "commands": {
+    "capture_page": {
+      "suggested_key": {
+        "default": "Alt+Shift+P",
+        "mac": "Alt+Shift+P"
+      },
+      "description": "Capture Full Page"
+    }
+  },
   "background": {
     "service_worker": "background.js"
   },

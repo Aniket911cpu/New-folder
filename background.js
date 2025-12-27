@@ -100,15 +100,25 @@ function sendMessageToTab(tabId, message) {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "capture") {
-        // Get active tab
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (tabs[0]) {
-                captureTab(tabs[0].id);
-                sendResponse({ status: "started" });
-            } else {
-                sendResponse({ status: "no_tab" });
-            }
-        });
+        triggerCapture(sendResponse);
         return true; // async response
     }
 });
+
+chrome.commands.onCommand.addListener((command) => {
+    if (command === "capture_page") {
+        console.log("Command triggered");
+        triggerCapture();
+    }
+});
+
+function triggerCapture(sendResponse) {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]) {
+            captureTab(tabs[0].id);
+            if (sendResponse) sendResponse({ status: "started" });
+        } else {
+            if (sendResponse) sendResponse({ status: "no_tab" });
+        }
+    });
+}

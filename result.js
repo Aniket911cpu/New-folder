@@ -90,31 +90,68 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Add download button for this part
         const btn = document.createElement('button');
-        btn.textContent = `Download Part ${pageIndex}`;
-        btn.style.margin = "0 5px";
+        btn.className = 'primary';
+        btn.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" /></svg> Download PNG (Part ${pageIndex})`;
         btn.onclick = () => {
             const link = document.createElement('a');
             link.download = `screencapture-part${pageIndex}-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
         };
-        document.querySelector('.controls').appendChild(btn);
+        document.getElementById('controls').appendChild(btn);
 
         processedHeight += chunkHeight;
         remainingHeight -= chunkHeight;
         pageIndex++;
     }
 
-    infoText.textContent = `Done! Split into ${canvases.length} part(s). Total Size: ${fullWidth}x${meta.fullHeight * devicePixelRatio}`;
+    infoText.innerHTML = `<strong>Success!</strong> Captured ${fullWidth}x${meta.fullHeight * devicePixelRatio}px. <br/>Split into ${canvases.length} image(s).`;
+
+    // Add PDF / Print Button
+    const printBtn = document.createElement('button');
+    printBtn.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><path d="M18,3H6V7H18M19,12A1,1 0 0,1 18,11A1,1 0 0,1 19,10A1,1 0 0,1 20,11A1,1 0 0,1 19,12M16,19H8V14H16M19,8H5A3,3 0 0,0 2,11V17H6V21H18V17H22V11A3,3 0 0,0 19,8Z"/></svg> Save as PDF`;
+    printBtn.style.marginLeft = '10px';
+    printBtn.onclick = () => {
+        window.print();
+    };
+    document.getElementById('controls').appendChild(printBtn);
+
+    // Add CSS for printing to ensure only canvas prints
+    const style = document.createElement('style');
+    style.innerHTML = `
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .preview-container, .preview-container * {
+                visibility: visible;
+            }
+            .preview-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                border: none;
+                margin: 0;
+                padding: 0;
+                max-height: none;
+                overflow: visible;
+            }
+            canvas {
+                margin: 0;
+                box-shadow: none;
+                max-width: 100%;
+                page-break-inside: avoid;
+            }
+            header, .controls, .info { display: none; }
+        }
+    `;
+    document.head.appendChild(style);
+
     if (canvases.length > 1) {
-        downloadBtn.style.display = 'none'; // Hide the original single download button
+        // Buttons are already appended in loop
     } else {
         // If single canvas, wire up the original button
-        downloadBtn.onclick = () => {
-            const link = document.createElement('a');
-            link.download = `screencapture-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
-            link.href = canvases[0].toDataURL('image/png');
-            link.click();
-        };
+        // We already did this logic effectively by building buttons in the loop.
+        // But if loop runs once, we have one button. All good.
     }
 });
