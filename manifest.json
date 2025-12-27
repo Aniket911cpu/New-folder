@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Full Page Capture",
+  "name": "SnapFlow - Web Capture & Snip",
   "version": "1.0.0",
   "description": "Capture a full-page screenshot of the active tab.",
   "permissions": [
