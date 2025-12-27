@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Feedback - SnapFlow</title>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #6366f1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        textarea,
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        button {
+            background: #6366f1;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #4f46e5;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>We value your feedback</h1>
+        <p>Help us improve SnapFlow. What's on your mind?</p>
+
+        <form id="feedbackForm">
+            <label>Type</label>
+            <select id="type">
+                <option value="bug">Report a Bug</option>
+                <option value="feature">Feature Request</option>
+                <option value="other">General Feedback</option>
+            </select>
+
+            <label>Message</label>
+            <textarea rows="5" placeholder="Tell us more..." required></textarea>
+
+            <label>Email (Optional)</label>
+            <input type="email" placeholder="In case we need to contact you">
+
+            <button type="submit">Send Feedback</button>
+        </form>
+    </div>
+    <script>
+        document.getElementById('feedbackForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert('Thank you for your feedback! We actually saved it to... nowhere yet (demo), but we appreciate it!');
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Welcome to SnapFlow - Full Page Capture, Evolved.</title>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+            background: #f8fafc;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        h1 {
+            color: #6366f1;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            font-size: 1.25em;
+            color: #64748b;
+            margin-bottom: 40px;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            text-align: left;
+            margin-bottom: 40px;
+        }
+
+        .feature h3 {
+            color: #334155;
+            margin-bottom: 10px;
+        }
+
+        .feature p {
+            font-size: 0.95em;
+            color: #64748b;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: #6366f1;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .cta-button:hover {
+            background: #4f46e5;
+        }
+
+        .footer {
+            margin-top: 40px;
+            font-size: 0.9em;
+            color: #94a3b8;
+        }
+
+        .icon {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 15px;
+            color: #6366f1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <svg class="icon" viewBox="0 0 24 24">
+            <path fill="currentColor"
+                d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9M12,17C9.5,17 7.31,15.26 6.5,13C7.31,10.74 9.5,9 12,9C14.5,9 16.69,10.74 17.5,13C16.69,15.26 14.5,17 12,17M12,10.5A1.5,1.5 0 0,0 10.5,12A1.5,1.5 0 0,0 12,13.5A1.5,1.5 0 0,0 13.5,12A1.5,1.5 0 0,0 12,10.5Z" />
+        </svg>
+        <h1>Welcome to SnapFlow</h1>
+        <p class="subtitle">You've successfully installed the ultimate web capture tool.</p>
+
+        <div class="features">
+            <div class="feature">
+                <h3>📸 Full Page Capture</h3>
+                <p>Scrolls automatically to stitch the entire page into one high-quality screenshot.</p>
+            </div>
+            <div class="feature">
+                <h3>✂️ Smart Snipping</h3>
+                <p>Capture visible parts or select custom regions with precise drag-and-drop tools.</p>
+            </div>
+            <div class="feature">
+                <h3>✏️ Edit & Annotate</h3>
+                <p>Highlight text, draw diagrams, and crop images directly in the result page.</p>
+            </div>
+        </div>
+
+        <a href="#" class="cta-button"
+            onclick="alert('Click the extension icon in your toolbar to start!'); return false;">Get Started</a>
+
+        <div class="footer">
+            <p><strong>Pro Tip:</strong> Pin SnapFlow to your toolbar for easy access!</p>
+            <p><a href="feedback.html" style="color: inherit;">Give Feedback</a> • <a href="options.html"
+                    style="color: inherit;">Settings</a></p>
+        </div>
+    </div>
+</body>
+
+</html>
